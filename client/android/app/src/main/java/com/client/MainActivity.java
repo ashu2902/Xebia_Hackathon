@@ -1,4 +1,4 @@
-package com.client;
+package com.cyberpunks.smartparkingapp;
 import android.os.Bundle;
 import com.facebook.react.ReactActivity;
 
