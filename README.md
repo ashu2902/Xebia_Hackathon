@@ -1,2 +1,2 @@
 # Xebia_Hackathon
-Repositpry for Xebia Hackathon
+Repository for Xebia Hackathon
