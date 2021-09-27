@@ -1,16 +1,21 @@
+from collections import Counter
 import yaml
 import numpy as np
 import cv2
-
-'''path references'''
+help(cv2.findContours)
+# path references
 fn = "testvideo_01.mp4" #3
-'''fn = "datasets\parkinglot_1_720p.mp4" '''
-'''#fn = "datasets\street_high_360p.mp4" '''
+#fn = "datasets\parkinglot_1_720p.mp4"
+#fn = "datasets\street_high_360p.mp4"
 fn_yaml = "yml_01.yml"
-fn_out =  "outputvideo_01.avi"
-cascade_src = 'classifier_02.xml'
+fn_out =  "Khare_outputvideo_01.avi"
+cascade_src = 'Khare_classifier_02.xml'
 car_cascade = cv2.CascadeClassifier(cascade_src)
 global_str = "Last change at: "
+reqNumber= ""
+testVar =""
+totalNUm = ""
+VacantSpaces = ""
 change_pos = 0.00
 dict =  {
         'text_overlay': True,
@@ -124,4 +129,40 @@ while (cap.isOpened()):
         if ret == False:
                 print("Video ended")
                 break
+
+# Background Subtraction
+    frame_blur = cv2.GaussianBlur(frame.copy(), (5,5), 3)
+    # frame_blur = frame_blur[150:1000, 100:1800]
+    frame_gray = cv2.cvtColor(frame_blur, cv2.COLOR_BGR2GRAY)
+    frame_out = frame.copy()
+
+    # Drawing the Overlay. Text at top left of video
+    if dict['text_overlay']:
+        str_on_frame = "%d/%d" % (video_cur_frame, video_info['num_of_frames'])
+        cv2.putText(frame_out, str_on_frame, (5,30), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.8, (0,255,255), 2, cv2.LINE_AA)
+        cv2.putText(frame_out,global_str + str(round(change_pos,2)) + 'sec', (5, 60), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.8, (255, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(frame_out,reqNumber,(5,90), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,255), 2, cv2.LINE_AA)
+        
+    # motion detection for all objects in video
+    if dict['motion_detection']:
+        # frame_blur = frame_blur[380:420, 240:470]
+        # cv2.imshow('dss', frame_blur)
+        fgmask = fgbg.apply(frame_blur)
+        bw = np.uint8(fgmask==255)*255
+        bw = cv2.erode(bw, kernel_erode, iterations=1)
+        bw = cv2.dilate(bw, kernel_dilate, iterations=1)
+        # cv2.imshow('dss',bw)
+        # cv2.imwrite("frame%d.jpg" % co, bw)
+        (cnts, _) = cv2.findContours(bw.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # loop over the contours
+        for c in cnts:
+            # print(cv2.contourArea(c))
+            # if the contour is too small, we ignore it
+            if cv2.contourArea(c) < dict['min_area_motion_contour']:
+                continue
+            (x, y, w, h) = cv2.boundingRect(c)
+            cv2.rectangle(frame_out, (x, y), (x + w, y + h), (255, 0, 0), 1)
+
 
