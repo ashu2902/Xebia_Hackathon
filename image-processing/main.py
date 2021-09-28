@@ -170,26 +170,20 @@ while (cap.isOpened()):
         for ind, park in enumerate(parking_data):
             points = np.array(park['points'])
             rect = parking_bounding_rects[ind]
-            roi_gray = frame_gray[rect[1]:(rect[1]+rect[3]), rect[0]:(rect[0]+rect[2])] # crop roi for faster calcluation
+            roi_gray = frame_gray[rect[1]:(rect[1]+rect[3]), rect[0]:(rect[0]+rect[2])] 
 
             laplacian = cv2.Laplacian(roi_gray, cv2.CV_64F)
             # cv2.imshow('oir', laplacian)
-            points[:,0] = points[:,0] - rect[0] # shift contour to roi
+            points[:,0] = points[:,0] - rect[0] 
             points[:,1] = points[:,1] - rect[1]
             delta = np.mean(np.abs(laplacian * parking_mask[ind]))
-            # if(delta<2.5):
-                # print("ind, del", ind, delta)
+          
             status = delta < dict['park_laplacian_th']
             # If detected a change in parking status, save the current time
             if status != parking_status[ind] and parking_buffer[ind]==None:
                 parking_buffer[ind] = video_cur_pos
                 change_pos = video_cur_pos
-                # print("state ", ind,delta)
-                # applying classifier in case a change is detected in the status of area
-                # if dict['classifier_used']:
-                #     classifier_result = run_classifier(roi_gray)
-                #     if classifier_result:
-                #         print(classifier_result)
+               
             # If status is still different than the one saved and counter is open
             elif status != parking_status[ind] and parking_buffer[ind]!=None:
                 if video_cur_pos - parking_buffer[ind] > dict['park_sec_to_wait']:
@@ -199,5 +193,44 @@ while (cap.isOpened()):
             elif status == parking_status[ind] and parking_buffer[ind]!=None:
                 parking_buffer[ind] = None
                 
+# counting Vacant Spaces
+for a, b in enumerate(parking_data):
+        if parking_status[a]:
+            count+=1
+            reqNumber=str(count)
+#     print(count)
+    VacantSpaces=count
+    print("Vacant Count", VacantSpaces)
+                
+ # changing the color on the basis on status change occured in the above section and putting numbers on areas
+    if dict['parking_overlay']:
+        for ind, park in enumerate(parking_data):
+            points = np.array(park['points'])
+            if parking_status[ind]:
+                color = (0,255,0)
+                rect = parking_bounding_rects[ind]
+                roi_gray_ov = frame_gray[rect[1]:(rect[1] + rect[3]),
+                               rect[0]:(rect[0] + rect[2])]  # crop roi for faster calcluation
+                res = run_classifier(roi_gray_ov, ind)
+                
+                if res:
+                    parking_data_motion.append(parking_data[ind])
+                    # del parking_data[ind]
+                    color = (0,0,255)
+                    
+            else:
+                color = (0,0,255)
+            
+            cv2.drawContours(frame_out, [points], contourIdx=-1,
+                                 color=color, thickness=2, lineType=cv2.LINE_8)
+            if dict['show_ids']:
+                    print_parkIDs(park, points, frame_out)
+                    totalNum = [park.values()]
+#                     print('hello', totalNum)
+                    countArray.append(totalNum);
+                    
+totalNum = len(countArray)       
+print('Total Counts',totalNum)
+
 
 
