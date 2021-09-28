@@ -16,10 +16,10 @@ car_cascade = cv2.CascadeClassifier(cascade_src)
 global_str = "Last change at: "
 reqNumber = ""
 testVar = ""
-totalNUm = ""
-VacantSpaces = ""
+totalNUm = 0
+VacantSpaces = 0
 change_pos = 0.00
-lotId = "1"
+lotId = 1
 dict = {
     'text_overlay': True,
     'parking_overlay': True,
@@ -50,7 +50,7 @@ cap.set(cv2.CAP_PROP_POS_FRAMES, dict['start_frame'])  # jump to frame number sp
 
 def sendtoserver( totalNum, VacantSpaces, lotId):
     print('Send to server', totalNum, VacantSpaces)
-    payload = {"total": totalNum, "vacant": VacantSpaces, "Lot_Id":lotId}
+    payload = {"total": totalNum, "vacant": VacantSpaces, "Lot_Id": lotId}
     response = requests.post("http://192.168.1.11:8080/api/test", data=payload, timeout=5)
     print("Payload", payload)
     return response
