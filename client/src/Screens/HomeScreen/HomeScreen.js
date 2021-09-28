@@ -20,7 +20,7 @@ const HomeScreen = () => {
   const mapRef = useRef(null);
   const bottomSheetRef = useRef();
 
-  const [parkingLots, setParkingLots] = useState(null);
+  const [parkingLots, setParkingLots] = useState([]);
   const [LocationPermissionGranted, setLocationPermissionGranted] =
     useState(false);
   const [latitude, setLat] = useState(0);
@@ -77,8 +77,7 @@ const HomeScreen = () => {
     let obj = [];
     await database
       .ref('ParkingLots/')
-      .once('value')
-      .then((snapshot) => {
+      .on('value', (snapshot) => {
         if (snapshot.exists()) {
           snapshot.forEach((snap) => {
             console.log('snap', snap.val());
@@ -128,16 +127,30 @@ const HomeScreen = () => {
     getCurrentLocation();
   };
 
+  handleLotPress = (item) => {
+    console.log('lot item', item)
+    let region = {
+      latitude: item.latitude,
+          longitude: item.longitude,
+          longitudeDelta: 0.004,
+          latitudeDelta: 0.009,
+    }
+    mapRef.current.animateToRegion(region);
+  }
+
   const renderParkingLots = ({ item }) => {
     console.log('item', item);
     return (
+      <TouchableOpacity 
+      onPress={() => handleLotPress(item)}>
       <ParkingLots
         name={item.name}
         longitude={item.longitude}
         latitude={item.latitude}
         url={item.img_url}
         location={item.location}
-      />
+        />
+        </TouchableOpacity>
     );
   };
   return (
@@ -177,12 +190,19 @@ const HomeScreen = () => {
         showsUserLocation={true}
         initialRegion={region}
       >
-        <Marker
-          coordinate={{
-            latitude: latitude,
-            longitude: longitude,
-          }}
-        ></Marker>
+        {parkingLots.map( (lot, index) => {
+          return(<Marker
+            key={index}
+            coordinate={{
+              latitude: Number(lot.latitude),
+              longitude: Number(lot.longitude),
+            }}
+            title={lot.name}
+            pinColor={Colors.primary}
+            />
+            )
+        })}
+       
       </MapView>
     
       {/* <RBSheet
