@@ -7,6 +7,9 @@ import {
   Alert,
   TouchableOpacity,
   Platform,
+  Linking,
+  Dimensions,
+  Image
 } from 'react-native';
 import { database, Colors } from '../../../Config';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
@@ -15,12 +18,21 @@ import mapStyles from '../../styles/mapStyles';
 import { FlatList } from 'react-native-gesture-handler';
 import ParkingLots from '../../Components/ParkingLots/ParkingLots';
 import RBSheet from 'react-native-raw-bottom-sheet';
+import { getDistance } from 'geolib';
+import axios from 'axios';
+
 
 const HomeScreen = () => {
+
+  const api = 'http://192.168.1.11:8080';
+  const windowWidth = Dimensions.get('window').width;
+
   const mapRef = useRef(null);
   const bottomSheetRef = useRef();
-
+  const [realTime, setRealTime] = useState();
   const [parkingLots, setParkingLots] = useState([]);
+  const [markerData, setMarkerData] = useState([]);
+  const [markerDist, setMarkerDist] = useState(0);
   const [LocationPermissionGranted, setLocationPermissionGranted] =
     useState(false);
   const [latitude, setLat] = useState(0);
@@ -47,19 +59,15 @@ const HomeScreen = () => {
         console.log('position', position);
         setLat(position.coords.latitude);
         setLong(position.coords.longitude);
-        setRegion({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          longitudeDelta: 0.004,
-          latitudeDelta: 0.009,
-        });
         let temp = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           longitudeDelta: 0.004,
           latitudeDelta: 0.009,
         };
-        mapRef.current.animateToRegion(temp);
+        setRegion(temp);
+       
+        mapRef.current.animateToRegion(region);
       },
       (error) => {
         Alert.alert(error.message.toString());
@@ -116,6 +124,19 @@ const HomeScreen = () => {
       requestLocationPermission();
     }
 
+    axios.get(`http://192.168.1.11:8080/api/test`).then(
+      function (response) {
+        console.log('response', JSON.stringify(response.data))
+        
+        setRealTime({vacant:78, id:1})
+      }
+    ).catch(function (error) {
+      console.log('err', error);
+    }).finally(function ()
+    {
+      console.log('called');
+    })
+
     if (LocationPermissionGranted == true) {
       getCurrentLocation();
     }
@@ -140,6 +161,11 @@ const HomeScreen = () => {
 
   const renderParkingLots = ({ item }) => {
     console.log('item', item);
+    let current = {
+      longitude,
+      latitude
+    }
+
     return (
       <TouchableOpacity 
       onPress={() => handleLotPress(item)}>
@@ -149,10 +175,51 @@ const HomeScreen = () => {
         latitude={item.latitude}
         url={item.img_url}
         location={item.location}
+        currentPos={current}
         />
         </TouchableOpacity>
     );
   };
+
+
+  const openGMaps = (lat, lng) => {
+    // var scheme = Platform.OS === 'ios' ? 'maps:' : 'geo:';
+    // var url = scheme + `${lat},${lng}`;
+    var url = Platform.OS === 'android' ? `google.navigation:q=${lat}+${lng}` : `maps://app?daddr=${lat}+${lng}`
+    Linking.openURL(url);
+  }
+  
+  handleMarkerPress = (parking) => {
+    let away = 0;
+    let currentPos = {
+      longitude,
+      latitude
+    }
+
+    let secondLongitude = parking.longitude;
+    let secondLatitude = parking.latitude;
+
+    console.log(`second ${secondLatitude} long ${secondLongitude}`)
+   const distance = getDistance(currentPos, {
+       longitude: secondLongitude, latitude: secondLatitude
+    })
+
+    console.log('distance', distance)
+
+    if (distance<1000 && distance>=0)
+    {
+        away = distance + 'm'
+    }
+    else
+    {
+        away = (distance/1000).toFixed(2) + 'km'
+    }
+
+    setMarkerDist(away);
+    setMarkerData(parking);
+    bottomSheetRef.current.open();
+  }
+
   return (
     <View style={{ flex: 1, height: '100%', width: '100%' }}>
       <View style={{flex:1, position:'absolute', bottom:0, left:0, right:0, justifyContent:'center', alignItems:'center', zIndex:2, backgroundColor:Colors.primaryLight1}}>
@@ -183,6 +250,7 @@ const HomeScreen = () => {
         provider={PROVIDER_GOOGLE}
         zoomEnabled={true}
         region={region}
+        customMapStyle={mapStyles}
         followsUserLocation={true}
         onMapReady={handleMapReady}
         style={{height:'100%', width:'100%'}}
@@ -198,20 +266,21 @@ const HomeScreen = () => {
               longitude: Number(lot.longitude),
             }}
             title={lot.name}
-            pinColor={Colors.primary}
+            pinColor={Colors.primaryLight2}
+            onPress={() => handleMarkerPress(lot)}
             />
             )
         })}
        
       </MapView>
     
-      {/* <RBSheet
+      <RBSheet
         ref={bottomSheetRef}
         closeOnDragDown={true}
         customStyles={{
           container: {
             zIndex: 10,
-            height: '40%',
+            height: '50%',
             borderTopEndRadius: 10,
             borderTopStartRadius: 10,
           },
@@ -224,34 +293,41 @@ const HomeScreen = () => {
         <View
           style={{
             flex: 1,
-            justifyContent: 'center',
             alignItems: 'center',
             zIndex: 2,
             backgroundColor: Colors.primaryLight1,
           }}
         >
-          <View style={{ width: '100%', padding: 5 }}>
-            <Text
-              style={{
-                fontSize: 20,
-                fontFamily: 'WorkSans-Bold',
-                marginLeft: 5,
-                color: Colors.primary,
-              }}
-            >
-              Nearby Spots
-            </Text>
+          <View style={{flexDirection:'column'}}>
+
+          <View style={{width:windowWidth,
+      justifyContent:'center',
+      alignItems:'center',
+      height:150}}>
+          <Image source={{ uri: markerData.img_url }} style={{ ...StyleSheet.absoluteFill, borderRadius:7.5, alignItems:'center', justifyContent:'center'}} />
+            </View>
+            <View style={{flexDirection:'column', marginHorizontal:15, marginVertical:15}}>
+          <Text style={{fontFamily:'WorkSans-Bold', fontSize:20, marginTop:15}}>
+            {markerData.name}
+          </Text>
+          <Text style={{fontFamily:'WorkSans-Medium', fontSize:15, marginVertical:2.5}}>
+            in {markerData.location}
+          </Text>
+          <Text style={{fontFamily:'WorkSans-Light', fontSize:15, marginVertical:2.5}}>
+            ~ {markerDist} away
+          </Text>
+         {realTime && realTime.id === markerData.id ?  <Text style={{fontFamily:'WorkSans-Regular', fontSize:15, marginVertical:2.5, color:'green'}}>
+            Spaces Available: {realTime.vacant}
+          </Text>: null}
+              </View>
           </View>
-          <FlatList
-            data={parkingLots}
-            horizontal={true}
-            showsHorizontalScrollIndicator={false}
-            style={{ paddingBottom: 10, marginLeft: 10, paddingTop: 5 }}
-            renderItem={renderParkingLots}
-            keyExtractor={(item) => item.id}
-          />
+         <View style={{flex:1,justifyContent:'center', alignItems:'center', zIndex:2, marginBottom:25}}>
+       <TouchableOpacity style={{borderRadius:15, backgroundColor:Colors.primary, justifyContent:'center', alignItems:'center'}} onPress={() => openGMaps(markerData.latitude, markerData.longitude)}>
+        <Text style={{color:'#fff', fontFamily:'WorkSans-SemiBold', paddingVertical:10, fontSize:20, paddingHorizontal:20}}>Get Directions</Text>
+       </TouchableOpacity>
+      </View>
         </View>
-      </RBSheet> */}
+      </RBSheet>
     </View>
   );
 };
