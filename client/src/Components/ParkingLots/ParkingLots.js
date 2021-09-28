@@ -5,11 +5,27 @@ import {
     StyleSheet,
     Image,
 } from "react-native";
+import { getDistance } from 'geolib';
 
 
 const ParkingLots = ({
-    name, longitude, latitude, url, location
+    name, longitude, latitude, url, location, currentPos, callbackDist
 }) => {
+
+let away = 0;
+   const distance = getDistance(currentPos, {
+        longitude, latitude
+    })
+
+    if (distance<1000 && distance>=0)
+    {
+        away = distance + 'm'
+    }
+    else
+    {
+        away = (distance/1000).toFixed(2) + 'km'
+    }
+    
     return (
         <View style={styles.wrapper}>
         <View style={styles.imageContainer}>
@@ -18,6 +34,7 @@ const ParkingLots = ({
         <View style={styles.textContainer}>
           <Text numberOfLines={2} style={textStyles.title}>{name}</Text>
           <Text style={textStyles.subtitle}>in {location}</Text>
+          <Text style={textStyles.subtitle}>~{away} away</Text>
         </View>
       </View>
     )

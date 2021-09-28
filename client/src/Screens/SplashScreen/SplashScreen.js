@@ -1,7 +1,8 @@
 import React, {useEffect} from 'react'
-import { SafeAreaView, Text } from 'react-native';
-import { database } from '../../../Config';
+import { SafeAreaView, Text, Image } from 'react-native';
+import { database, Colors} from '../../../Config';
 import auth from '@react-native-firebase/auth';
+
 
 const SplashScreen = ({navigation}) => {
 
@@ -39,8 +40,8 @@ const SplashScreen = ({navigation}) => {
     }, [])
 
     return (
-            <SafeAreaView style = {{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-            <Text style = {{fontSize: 30}}>Splash Screen</Text>
+            <SafeAreaView style = {{flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor:Colors.primaryShade2}}>
+            <Image source={require('../../Assets/Images/Logo/logo-1.png')} style={{ width: 180*1.25, height: 58*1.25}}/>
         </SafeAreaView>
     )
 }
