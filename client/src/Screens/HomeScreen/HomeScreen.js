@@ -18,18 +18,19 @@ import mapStyles from '../../styles/mapStyles';
 import { FlatList } from 'react-native-gesture-handler';
 import ParkingLots from '../../Components/ParkingLots/ParkingLots';
 import RBSheet from 'react-native-raw-bottom-sheet';
+import auth from '@react-native-firebase/auth';
 import { getDistance } from 'geolib';
 import axios from 'axios';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-
-const HomeScreen = () => {
+const HomeScreen = ({navigation}) => {
 
   const api = 'http://192.168.1.11:8080';
   const windowWidth = Dimensions.get('window').width;
 
   const mapRef = useRef(null);
   const bottomSheetRef = useRef();
-  const [realTime, setRealTime] = useState();
+  const [realTime, setRealTime] = useState([]);
   const [parkingLots, setParkingLots] = useState([]);
   const [markerData, setMarkerData] = useState([]);
   const [markerDist, setMarkerDist] = useState(0);
@@ -124,24 +125,28 @@ const HomeScreen = () => {
       requestLocationPermission();
     }
 
-    axios.get(`http://192.168.1.11:8080/api/test`).then(
-      function (response) {
-        console.log('response', JSON.stringify(response.data))
-        
-        setRealTime({vacant:78, id:1})
-      }
-    ).catch(function (error) {
-      console.log('err', error);
-    }).finally(function ()
-    {
-      console.log('called');
-    })
-
-    if (LocationPermissionGranted == true) {
+    const interval = setInterval(async () => {
+     await axios.get(`http://192.168.1.11:8080/api/test`).then(
+        function (response) {
+          // console.log('response', response.data)
+          setRealTime({vacant: response.data.vacant, id: response.data.Lot_Id});
+          }
+          ).catch(function (error) {
+            console.log('err', error);
+          }).finally(function ()
+          {
+            // console.log('called');
+          })
+        }, 5000)
+          
+          if (LocationPermissionGranted == true) {
       getCurrentLocation();
     }
 
     fetchParkingLots();
+
+    return () => clearInterval(interval); 
+
   }, []);
 
   handleMapReady = () => {
@@ -181,6 +186,11 @@ const HomeScreen = () => {
     );
   };
 
+  const signOut = () => {
+    auth()
+    .signOut()
+    .then(() => navigation.replace('LoginScreen'));
+    }
 
   const openGMaps = (lat, lng) => {
     // var scheme = Platform.OS === 'ios' ? 'maps:' : 'geo:';
@@ -220,8 +230,12 @@ const HomeScreen = () => {
     bottomSheetRef.current.open();
   }
 
+  // console.log('realtime DATA', realTime && realTime.Lot_Id, realTime && realTime.vacant);
   return (
     <View style={{ flex: 1, height: '100%', width: '100%' }}>
+      <TouchableOpacity onPress={() => signOut()} style={{position:'absolute', zIndex:2, backgroundColor:'white', height:40, width:40, borderRadius:35, margin:15, justifyContent:'center', alignItems:'center'}}>
+        <Icon name={'logout'} color={'#000000'} size={30} />
+      </TouchableOpacity>
       <View style={{flex:1, position:'absolute', bottom:0, left:0, right:0, justifyContent:'center', alignItems:'center', zIndex:2, backgroundColor:Colors.primaryLight1}}>
       <View style={{width:'100%', padding:5}}>
           <Text style={{fontSize:20, fontFamily:'WorkSans-Bold', marginLeft:5, color:Colors.primary}}>
@@ -316,9 +330,9 @@ const HomeScreen = () => {
           <Text style={{fontFamily:'WorkSans-Light', fontSize:15, marginVertical:2.5}}>
             ~ {markerDist} away
           </Text>
-         {realTime && realTime.id === markerData.id ?  <Text style={{fontFamily:'WorkSans-Regular', fontSize:15, marginVertical:2.5, color:'green'}}>
+         {realTime==null ? null : parseInt(realTime.id) === markerData.id ?  <Text style={{fontFamily:'WorkSans-Regular', fontSize:15, marginVertical:2.5, color:'green'}}>
             Spaces Available: {realTime.vacant}
-          </Text>: null}
+          </Text>: console.log('error', realTime, markerData, realTime.id)}
               </View>
           </View>
          <View style={{flex:1,justifyContent:'center', alignItems:'center', zIndex:2, marginBottom:25}}>
